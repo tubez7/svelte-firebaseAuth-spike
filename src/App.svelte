@@ -1,17 +1,37 @@
 <script>
-	import {auth, googleProvider} from "./firebase";
-	import { signInWithPopup, GoogleAuthProvider, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signInAnonymously  } from "firebase/auth"
-	import {authState} from "rxfire/auth";
-	import Chatroom from "./Chatroom.svelte"
+	import {auth, googleProvider, emailProvider} from "./firebase";
+	import { signInWithPopup, GoogleAuthProvider, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signInAnonymously, signInWithRedirect, EmailAuthProvider  } from "firebase/auth"
+	
+
+
+	
+	let uid;
+
+	
 
 	let user;
 
-	const unsubscribe = authState(auth).subscribe(usr => user = usr);
+	let isLoggedIn = false;
 
-// 	// Initiate firebase auth
-// function initFirebaseAuth() {
-//   // Listen to auth state changes.
-//   onAuthStateChanged(auth, authStateObserver);
+	onAuthStateChanged(auth, (user) => {
+		if (user) {
+			user = auth.currentUser;
+			console.log("in auth listen", user)
+			isLoggedIn = true;
+			// User is signed in, see docs for a list of available properties
+			// https://firebase.google.com/docs/reference/js/firebase.User
+			uid = user.uid;
+			console.log("user ID", uid);
+			// ...
+		} else {
+			// User is signed out
+			// ...
+			console.log("so what now?", user)
+		}
+	});
+
+
+
 
 let email = "anemail@email.com";
 
@@ -22,15 +42,16 @@ console.log("in script", user)
 
 
 	function googleLogin() {
-		signInWithPopup(auth, googleProvider)
+		signInWithRedirect(auth, googleProvider)
 		.then((result) => {
 			// This gives you a Google Access Token. You can use it to access Google APIs.
 			const credential = GoogleAuthProvider.credentialFromResult(result);
+			console.log("credential", credential)
 			const token = credential.accessToken;
 			console.log("access token", token)
 			// The signed-in user info.
 			user = result.user;
-			console.log("user obj", user);
+			console.log("user obj in google", user);
 		})
 		.catch((error) => {
 			// Handle Errors here.
@@ -42,6 +63,7 @@ console.log("in script", user)
 			const email = error.email;
 			// The AuthCredential type that was used.
 			const credential = GoogleAuthProvider.credentialFromError(error);
+			console.log(credential, "in google error")
 			// ...
 		});
 		;
@@ -51,6 +73,7 @@ console.log("in script", user)
 		createUserWithEmailAndPassword(auth, email, password)
 		.then((userCredential) => {
 			// Signed in 
+			console.log("usercredential in email create", userCredential)
 			user = userCredential.user;
 			console.log("user obj", user)
 			// ...
@@ -68,7 +91,8 @@ console.log("in script", user)
 		signInWithEmailAndPassword(auth, email, password)
 		.then((userCredential) => {
 			// Signed in 
-			const user = userCredential.user;
+			console.log("user credential in sign up", userCredential)
+			user = userCredential.user;
 			console.log("user obj", user)
 			// ...
 		})
@@ -78,6 +102,25 @@ console.log("in script", user)
 			console.log(errorMessage)
 		});
 	}
+
+
+	// function signInEmail() {
+	// 	signInWithRedirect(auth, emailProvider)
+	// 	.then((result) => {
+	// 		// This gives you a Google Access Token. You can use it to access Google APIs.
+	// 		const credential = EmailAuthProvider.credentialFromResult(result);
+	// 		const token = credential.accessToken;
+	// 		console.log("access token", token)
+	// 		// The signed-in user info.
+	// 		user = result.user;
+	// 		console.log("user obj", user);
+	// 	})
+	// 	.catch((error) => {
+	// 		const errorCode = error.code;
+	// 		const errorMessage = error.message;
+	// 		console.log(errorMessage)
+	// 	});
+	// }
 
 	function signInAnon() {
 		signInAnonymously(auth)
@@ -104,6 +147,7 @@ console.log("in script", user)
 	function logout() {
 		signOut(auth);
 		console.log(user)
+		isLoggedIn = false;
 	}
 
 
@@ -113,7 +157,7 @@ console.log("in script", user)
 
 
 <main>
-	{#if user}
+	{#if isLoggedIn}
 	<button on:click={logout}>SIGN OUT HERE</button>
 	{:else}
 	<div class="login-form">
